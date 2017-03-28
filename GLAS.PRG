@@ -12,6 +12,8 @@ set softseek on
 
 callmod('GLASNOTI()')
 
+//alert('  ')
+
 if !empty(gTmpGL)
    ferase('&g_GLAS_Tmp\&gTmpGL'+'.DBF')
    ferase('&g_GLAS_Tmp\&gTmpGL'+'.NTX')
