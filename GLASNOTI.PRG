@@ -30,8 +30,8 @@ set index to &g_DAAS_Path\ACCTMAST
 
 gTmpPayee := CreateTmp(g_GLAS_Tmp)
 dbcreate(g_GLAS_Tmp+'\'+gTmpPayee, { {'APRVDATE','D',8,0}, {'ACCTNO','C',11,0}, {'PAYNAME','C',70,0}, {'AMOUNT','N',12,2}, {'VALDATE','D',8,0},;
-                                     {'TYPE','C',1,0}, {'PAYEECODE','C',6,0}, {'VATINCL','L',1,0}, {'DISI','C',1,0}, {'DVNUMBER','C',8,0},;
-									 {'ACCTNAME','C',50,0}, {'UNIT','C',40,0}, {'JVNUMBER','C',8,0} } )
+                                     {'TYPE','C',1,0}, {'PAYEECODE','C',6,0}, {'WITH_WTAX','L',1,0}, {'VATINCL','L',1,0}, {'DISI','C',1,0},;
+									 {'DVNUMBER','C',8,0}, {'ACCTNAME','C',50,0}, {'UNIT','C',40,0}, {'JVNUMBER','C',8,0} } )
 
 if !netuse('&g_GLAS_Tmp\&gTmpPayee',.f.,5)
    close databases
@@ -54,6 +54,7 @@ if USERBRCH->(dbseek(str(nUserId,len(str(USERBRCH->userid)))))
 			   (gTmpPayee)->valdate   := ACCTMAST->valdate
 			   (gTmpPayee)->type      := PAYEE->type
 			   (gTmpPayee)->payeecode := PAYEE->payeecode
+			   (gTmpPayee)->with_wtax := PAYEE->with_wtax
 			   (gTmpPayee)->vatincl   := PAYEE->vatincl
 			   (gTmpPayee)->disi      := PAYEE->disi
 			   (gTmpPayee)->acctname  := ACCTMAST->acctname

@@ -15,6 +15,13 @@ private lRFPModule:=.t., lAddRFPUDF
 
 DispDVScrn()
 
+if cVBrCode <> '800'
+   @24,0 say ' ERROR: ' color 'r+'
+   @24,8 say padr('GLAS is in '+alltrim(cSelectBr)+'. Press Any Key.',72) color 'w'
+   inkey(0)
+   return
+endif
+
 if !OpenBrEntry('DV')
    return
 endif
@@ -284,61 +291,71 @@ if cOption == 'A'
 				 restscreen(,,,,cScrn)
 				 return
 			  else
-				 if !netuse('&g_RFM_Path\DEFLTVAL',.f.,5)
-				    return
-				 endif
-				 set index to &g_RFM_Path\DEFLTVAL
-				 
-				 if (gTmpPayee)->vatincl
-				    if !DEFLTVAL->(dbseek(padr('VAT',10)))
+				 if !(gTmpPayee)->with_wtax
+				    if (gTmpGL)->(dbseek(ORJVGL->glcode))
+					   nGLDtDebit := (gTmpPayee)->amount
+					   aadd(aGLDtls, left(trans(ORJVGL->glcode,'@R 9-99-99-9999-99')+' '+(gTmpGL)->glname,44)+'³'+;
+					                 trans(nGLDtDebit,'@Z 9,999,999,999.99')+'³'+;
+									 trans(0.00,'@Z 9,999,999,999.99')+right((gTmpGL)->glname,22)+'1')
+					endif
+					ORJVGL->(dbclosearea())
+				 else
+				    if !netuse('&g_RFM_Path\DEFLTVAL',.f.,5)
+					   return
+					endif
+					set index to &g_RFM_Path\DEFLTVAL
+					
+					if (gTmpPayee)->vatincl
+					   if !DEFLTVAL->(dbseek(padr('VAT',10)))
+					      @24,0 say ' ERROR: ' color 'r+'
+						  @24,8 say padr('No VAT value found. Press Any Key.',72) color 'w'
+						  ORJVGL->(dbclosearea())
+						  DEFLTVAL->(dbclosearea())
+						  inkey(0)
+						  restscreen(,,,,cScrn)
+						  return
+					   else
+						  nVAT := val(DEFLTVAL->defltvalue)
+					   endif
+					endif
+					
+					if !DEFLTVAL->(dbseek(padr('WTAX',10)))
 					   @24,0 say ' ERROR: ' color 'r+'
-					   @24,8 say padr('No VAT value found. Press Any Key.',72) color 'w'
+					   @24,8 say padr('No Withholding Tax value found. Press Any Key.',72) color 'w'
 					   ORJVGL->(dbclosearea())
 					   DEFLTVAL->(dbclosearea())
 					   inkey(0)
 					   restscreen(,,,,cScrn)
 					   return
 					else
-					   nVAT := val(DEFLTVAL->defltvalue)
+					   nWTax := val(DEFLTVAL->defltvalue)
 					endif
-				 endif
-				 
-				 if !DEFLTVAL->(dbseek(padr('WTAX',10)))
-				    @24,0 say ' ERROR: ' color 'r+'
-					@24,8 say padr('No Withholding Tax value found. Press Any Key.',72) color 'w'
-					ORJVGL->(dbclosearea())
 					DEFLTVAL->(dbclosearea())
-					inkey(0)
-					restscreen(,,,,cScrn)
-					return
-				 else
-					nWTax := val(DEFLTVAL->defltvalue)
-				 endif
-				 DEFLTVAL->(dbclosearea())
-				 
-				 if (gTmpGL)->(dbseek(ORJVGL->glcode))
-				    nNetOfVAT  := (gTmpPayee)->amount / ((1 + nVAT) - nWTax)
-					nGLDtDebit := nNetOfVAT + (nNetOfVAT * nVAT)
-					aadd(aGLDtls, left(trans(ORJVGL->glcode,'@R 9-99-99-9999-99')+' '+(gTmpGL)->glname,44)+'³'+;
-					              trans(nGLDtDebit,'@Z 9,999,999,999.99')+'³'+;
-								  trans(0.00,'@Z 9,999,999,999.99')+right((gTmpGL)->glname,22)+'1')
-				 endif
-				 
-				 if !ORJVGL->(dbseek(left((gTmpPayee)->acctno,3)+'3'+substr((gTmpPayee)->acctno,4,2)+'  '+'2'))
-				    @24,0 say ' ERROR: ' color 'r+'
-					@24,8 say padr('No WTax GL mapping found. Press Any Key.',72) color 'w'
-					ORJVGL->(dbclosearea())
-					inkey(0)
-					restscreen(,,,,cScrn)
-					return
-				 else
+					
 					if (gTmpGL)->(dbseek(ORJVGL->glcode))
-					   nGLDtCredit := nNetOfVAT * nWTax
+					   nNetOfVAT  := (gTmpPayee)->amount / ((1 + nVAT) - nWTax)
+					   nGLDtDebit := nNetOfVAT + (nNetOfVAT * nVAT)
 					   aadd(aGLDtls, left(trans(ORJVGL->glcode,'@R 9-99-99-9999-99')+' '+(gTmpGL)->glname,44)+'³'+;
-					                 trans(0.00,'@Z 9,999,999,999.99')+'³'+;
-									 trans(nGLDtCredit,'@Z 9,999,999,999.99')+right((gTmpGL)->glname,22)+'2')
+					                 trans(nGLDtDebit,'@Z 9,999,999,999.99')+'³'+;
+									 trans(0.00,'@Z 9,999,999,999.99')+right((gTmpGL)->glname,22)+'1')
 					endif
-					ORJVGL->(dbclosearea())
+					
+					if !ORJVGL->(dbseek(left((gTmpPayee)->acctno,3)+'3'+substr((gTmpPayee)->acctno,4,2)+'  '+'2'))
+					   @24,0 say ' ERROR: ' color 'r+'
+					   @24,8 say padr('No WTax GL mapping found. Press Any Key.',72) color 'w'
+					   ORJVGL->(dbclosearea())
+					   inkey(0)
+					   restscreen(,,,,cScrn)
+					   return
+					else
+					   if (gTmpGL)->(dbseek(ORJVGL->glcode))
+					      nGLDtCredit := nNetOfVAT * nWTax
+						  aadd(aGLDtls, left(trans(ORJVGL->glcode,'@R 9-99-99-9999-99')+' '+(gTmpGL)->glname,44)+'³'+;
+						                trans(0.00,'@Z 9,999,999,999.99')+'³'+;
+										trans(nGLDtCredit,'@Z 9,999,999,999.99')+right((gTmpGL)->glname,22)+'2')
+					   endif
+					   ORJVGL->(dbclosearea())
+					endif
 				 endif
 				 
 				 nAmt := (gTmpPayee)->amount

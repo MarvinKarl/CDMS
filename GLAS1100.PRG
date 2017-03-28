@@ -20,6 +20,13 @@ private lAddRFPUDF:=.f.
 
 DispJVScrn()
 
+if cVBrCode <> '800'
+   @24,0 say ' ERROR: ' color 'r+'
+   @24,8 say padr('GLAS is in '+alltrim(cSelectBr)+'. Press Any Key.',72) color 'w'
+   inkey(0)
+   return
+endif
+
 if !OpenBrEntry('JV')
    return
 endif
